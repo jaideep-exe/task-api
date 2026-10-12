@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 app = FastAPI()
@@ -27,3 +27,19 @@ def get_task(task_id: int):
         if task["id"] == task_id:
             return task
     return JSONResponse(status_code=404, content={"error": f"Task {task_id} not found"})
+
+@app.post("/tasks", status_code=201, summary="Create a new task")
+async def create_task(request: Request):
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse(status_code=400, content={"error": "Request body must be valid JSON"})
+
+    title = body.get("title") if isinstance(body, dict) else None
+    if not isinstance(title, str) or not title.strip():
+        return JSONResponse(status_code=400, content={"error": "title is required and must be a non-empty string"})
+
+    next_id = max((t["id"] for t in tasks), default=0) + 1
+    task = {"id": next_id, "title": title.strip(), "done": False}
+    tasks.append(task)
+    return task
